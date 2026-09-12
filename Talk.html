@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AZHA MOH Messages</title>
+    <style>
+      :root {
+        --bg: #070d17;
+        --bg-2: #0f172a;
+        --panel: rgba(15, 23, 42, 0.96);
+        --panel-2: rgba(17, 24, 39, 0.98);
+        --muted: #cbd5e1;
+        --text: #f8fafc;
+        --accent: #8b5cf6;
+        --accent-2: #22d3ee;
+        --border: rgba(255, 255, 255, 0.12);
+        --incoming: rgba(148, 163, 184, 0.14);
+        --outgoing: linear-gradient(135deg, #8b5cf6, #22d3ee);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: Arial, Helvetica, sans-serif;
+        background: radial-gradient(circle at top, #101f32 0%, #09131f 30%, var(--bg) 100%);
+        color: var(--text);
+      }
+
+      .layout {
+        display: grid;
+        grid-template-columns: 300px 1fr;
+        min-height: 100vh;
+      }
+
+      .sidebar {
+        background: rgba(15, 23, 42, 0.94);
+        border-right: 1px solid var(--border);
+        padding: 18px 14px;
+      }
+
+      .brand-head {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 8px 8px 18px;
+        border-bottom: 1px solid var(--border);
+      }
+
+      .brand-head img {
+        width: 42px;
+        height: 42px;
+        object-fit: contain;
+      }
+
+      .brand-head h1 {
+        margin: 0;
+        font-size: 1rem;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .sidebar-section {
+        margin-top: 20px;
+      }
+
+      .section-label {
+        margin: 0 0 12px;
+        color: rgba(226, 232, 240, 0.7);
+        font-size: 0.75rem;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+      }
+
+      .friend-form {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 14px;
+      }
+
+      .friend-form input,
+      .composer input {
+        width: 100%;
+        padding: 12px 14px;
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        background: rgba(255, 255, 255, 0.04);
+        color: var(--text);
+      }
+
+      .friend-form button,
+      .composer button,
+      .nav-btn {
+        border: none;
+        border-radius: 12px;
+        cursor: pointer;
+        font-weight: 700;
+      }
+
+      .friend-form button,
+      .composer button {
+        padding: 12px 16px;
+        background: linear-gradient(135deg, var(--accent), var(--accent-2));
+        color: white;
+      }
+
+      .friend-list {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      .friend-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        width: 100%;
+        padding: 12px 14px;
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        background: rgba(255, 255, 255, 0.02);
+        color: var(--text);
+        cursor: pointer;
+        text-align: left;
+      }
+
+      .friend-item.active {
+        background: rgba(139, 92, 246, 0.18);
+        border-color: rgba(139, 92, 246, 0.55);
+      }
+
+      .friend-name {
+        font-weight: 700;
+      }
+
+      .friend-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: var(--accent-2);
+        box-shadow: 0 0 10px rgba(34, 211, 238, 0.8);
+      }
+
+      .main {
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+      }
+
+      .topbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 18px 26px;
+        border-bottom: 1px solid var(--border);
+        background: rgba(15, 23, 42, 0.7);
+      }
+
+      .topbar h2 {
+        margin: 0;
+        font-size: clamp(1.2rem, 2vw, 2rem);
+      }
+
+      .topbar-right {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .nav-btn {
+        padding: 10px 14px;
+        background: rgba(255, 255, 255, 0.06);
+        color: var(--text);
+        border: 1px solid var(--border);
+        text-decoration: none;
+      }
+
+      .chat-window {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+      }
+
+      .message-list {
+        flex: 1;
+        overflow-y: auto;
+        padding: 24px 26px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      .message-row {
+        display: flex;
+      }
+
+      .message-row.me {
+        justify-content: flex-end;
+      }
+
+      .bubble {
+        max-width: min(75%, 440px);
+        padding: 12px 16px;
+        border-radius: 18px;
+        line-height: 1.5;
+        word-wrap: break-word;
+      }
+
+      .message-row.me .bubble {
+        background: var(--outgoing);
+        color: white;
+        border-bottom-right-radius: 6px;
+      }
+
+      .message-row.them .bubble {
+        background: var(--incoming);
+        color: var(--text);
+        border-bottom-left-radius: 6px;
+      }
+
+      .timestamp {
+        display: block;
+        margin-top: 6px;
+        font-size: 0.72rem;
+        opacity: 0.75;
+      }
+
+      .composer {
+        display: flex;
+        gap: 12px;
+        padding: 18px 26px 24px;
+        border-top: 1px solid var(--border);
+        background: rgba(15, 23, 42, 0.7);
+      }
+
+      .empty-state {
+        margin: auto 0;
+        padding: 30px 18px;
+        color: var(--muted);
+        text-align: center;
+      }
+
+      @media (max-width: 800px) {
+        .layout {
+          grid-template-columns: 1fr;
+        }
+
+        .sidebar {
+          border-right: none;
+          border-bottom: 1px solid var(--border);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="layout">
+      <aside class="sidebar">
+        <div class="brand-head">
+          <img src="channels4_profile.jpg" alt="AZHA MOH logo" />
+          <h1>AZHA MOH</h1>
+        </div>
+
+        <div class="sidebar-section">
+          <p class="section-label">Friends</p>
+          <form id="friendForm" class="friend-form">
+            <input id="friendName" type="text" placeholder="Add friend" />
+            <button type="submit">Add</button>
+          </form>
+          <div id="friendList" class="friend-list"></div>
+        </div>
+      </aside>
+
+      <main class="main">
+        <header class="topbar">
+          <h2 id="chatHeader">Messages</h2>
+          <div class="topbar-right">
+            <a class="nav-btn" href="account.html">Accounts</a>
+            <button id="logoutBtn" class="nav-btn" type="button">Log out</button>
+          </div>
+        </header>
+
+        <section class="chat-window">
+          <div id="messageList" class="message-list"></div>
+          <form id="messageForm" class="composer">
+            <input id="messageInput" type="text" placeholder="Write a message..." autocomplete="off" />
+            <button type="submit">Send</button>
+          </form>
+        </section>
+      </main>
+    </div>
+
+    <script src="accounts.js"></script>
+    <script>
+      const {
+        getCurrentUser,
+        logout,
+        addFriend,
+        getFriends,
+        sendMessage,
+        getConversation,
+        findUserById
+      } = window.AZHAAccounts;
+
+      const friendForm = document.getElementById('friendForm');
+      const friendNameInput = document.getElementById('friendName');
+      const friendList = document.getElementById('friendList');
+      const messageList = document.getElementById('messageList');
+      const messageForm = document.getElementById('messageForm');
+      const messageInput = document.getElementById('messageInput');
+      const chatHeader = document.getElementById('chatHeader');
+      const logoutBtn = document.getElementById('logoutBtn');
+
+      let selectedFriendId = null;
+
+      function formatTime(timestamp) {
+        const date = new Date(timestamp);
+        return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      }
+
+      function renderFriends() {
+        const friends = getFriends();
+        friendList.innerHTML = '';
+
+        if (!friends.length) {
+          const empty = document.createElement('div');
+          empty.className = 'empty-state';
+          empty.textContent = 'No friends yet. Add someone to start chatting.';
+          friendList.appendChild(empty);
+          return;
+        }
+
+        friends.forEach((friend) => {
+          const button = document.createElement('button');
+          button.type = 'button';
+          button.className = 'friend-item' + (friend.id === selectedFriendId ? ' active' : '');
+          button.innerHTML = `
+            <span class="friend-name">${friend.username}</span>
+            <span class="friend-dot"></span>
+          `;
+
+          button.addEventListener('click', () => {
+            selectedFriendId = friend.id;
+            renderFriends();
+            renderMessages();
+          });
+
+          friendList.appendChild(button);
+        });
+      }
+
+      function renderMessages() {
+        const currentUser = getCurrentUser();
+
+        if (!currentUser) {
+          window.location.href = 'account.html';
+          return;
+        }
+
+        if (!selectedFriendId) {
+          const friends = getFriends();
+          if (friends.length) {
+            selectedFriendId = friends[0].id;
+          }
+        }
+
+        const friend = selectedFriendId ? findUserById(selectedFriendId) : null;
+        chatHeader.textContent = friend ? friend.username : 'Messages';
+        const conversation = selectedFriendId ? getConversation(selectedFriendId) : [];
+
+        messageList.innerHTML = '';
+
+        if (!selectedFriendId || !conversation.length) {
+          const empty = document.createElement('div');
+          empty.className = 'empty-state';
+          empty.textContent = selectedFriendId
+            ? 'No messages yet. Send the first hello.'
+            : 'Choose a friend to view messages.';
+          messageList.appendChild(empty);
+          return;
+        }
+
+        conversation.forEach((message) => {
+          const row = document.createElement('div');
+          const isMine = message.fromId === currentUser.id;
+          row.className = 'message-row ' + (isMine ? 'me' : 'them');
+
+          const bubble = document.createElement('div');
+          bubble.className = 'bubble';
+          bubble.innerHTML = `${message.text}<span class="timestamp">${formatTime(message.timestamp)}</span>`;
+
+          row.appendChild(bubble);
+          messageList.appendChild(row);
+        });
+
+        messageList.scrollTop = messageList.scrollHeight;
+      }
+
+      friendForm.addEventListener('submit', (event) => {
+        event.preventDefault();
+        const username = friendNameInput.value.trim();
+
+        if (!username) {
+          return;
+        }
+
+        const result = addFriend(username);
+
+        if (!result.success) {
+          alert(result.message);
+          return;
+        }
+
+        selectedFriendId = result.friend.id;
+        friendNameInput.value = '';
+        renderFriends();
+        renderMessages();
+      });
+
+      messageForm.addEventListener('submit', (event) => {
+        event.preventDefault();
+
+        if (!selectedFriendId) {
+          alert('Pick a friend first.');
+          return;
+        }
+
+        const text = messageInput.value.trim();
+        const result = sendMessage({ toUserId: selectedFriendId, text });
+
+        if (!result.success) {
+          alert(result.message);
+          return;
+        }
+
+        messageInput.value = '';
+        renderMessages();
+      });
+
+      logoutBtn.addEventListener('click', () => {
+        logout();
+        window.location.href = 'account.html';
+      });
+
+      function boot() {
+        const currentUser = getCurrentUser();
+
+        if (!currentUser) {
+          window.location.href = 'account.html';
+          return;
+        }
+
+        const friends = getFriends();
+        if (friends.length) {
+          selectedFriendId = friends[0].id;
+        }
+
+        renderFriends();
+        renderMessages();
+      }
+
+      boot();
+    </script>
+  </body>
+</html>

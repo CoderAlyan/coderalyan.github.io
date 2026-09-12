@@ -174,6 +174,54 @@
         cursor: pointer;
       }
 
+      .account-user-panel {
+        display: none;
+        margin-bottom: 18px;
+        padding: 18px 16px;
+        border-radius: 14px;
+        background: rgba(34, 211, 238, 0.08);
+        border: 1px solid rgba(34, 211, 238, 0.25);
+      }
+
+      .account-user-panel.visible {
+        display: block;
+      }
+
+      .account-user-panel p {
+        margin: 0 0 10px;
+        color: rgba(244, 247, 255, 0.86);
+      }
+
+      .account-user-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 10px;
+      }
+
+      .manage-link,
+      .logout-inline {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 10px 14px;
+        border-radius: 10px;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        text-decoration: none;
+        cursor: pointer;
+        font-weight: 700;
+      }
+
+      .manage-link {
+        background: rgba(255, 255, 255, 0.06);
+        color: #f4f7ff;
+      }
+
+      .logout-inline {
+        background: rgba(248, 113, 113, 0.12);
+        color: #fecaca;
+      }
+
       .account-message {
         min-height: 22px;
         margin-top: 12px;
@@ -199,13 +247,22 @@
         <button type="button" id="closeAccountModal" class="close-btn">×</button>
         <h3>Account</h3>
 
+        <div id="userAccountPanel" class="account-user-panel">
+          <p>Signed in as <strong id="accountUserName">User</strong></p>
+          <p id="accountUserEmail">user@example.com</p>
+          <div class="account-user-actions">
+            <a class="manage-link" href="account.html">Manage account</a>
+            <button id="logoutFromMenuBtn" class="logout-inline" type="button">Log out</button>
+          </div>
+        </div>
+
         <form id="loginForm" class="account-form">
           <input type="email" id="loginEmail" placeholder="Email" required />
           <input type="password" id="loginPassword" placeholder="Password" required />
           <button type="submit">Login</button>
         </form>
 
-        <hr style="margin: 18px 0; border-color: rgba(255,255,255,0.08);" />
+        <hr id="authDivider" style="margin: 18px 0; border-color: rgba(255,255,255,0.08);" />
 
         <form id="signupForm" class="account-form">
           <input type="text" id="signupUsername" placeholder="Display name" />
@@ -278,9 +335,38 @@
 
       function updateAccountButton() {
         const button = document.getElementById('accountBtn');
-        if (!button) return;
+        const userAccountPanel = document.getElementById('userAccountPanel');
+        const accountUserName = document.getElementById('accountUserName');
+        const accountUserEmail = document.getElementById('accountUserEmail');
+        const loginForm = document.getElementById('loginForm');
+        const signupForm = document.getElementById('signupForm');
+        const authDivider = document.getElementById('authDivider');
+        const logoutFromMenuBtn = document.getElementById('logoutFromMenuBtn');
         const currentUser = getCurrentUser();
+
+        if (!button) return;
         button.textContent = currentUser ? currentUser.email : 'Account';
+
+        const isLoggedIn = Boolean(currentUser);
+        if (userAccountPanel) {
+          userAccountPanel.classList.toggle('visible', isLoggedIn);
+        }
+        if (loginForm) loginForm.style.display = isLoggedIn ? 'none' : 'flex';
+        if (signupForm) signupForm.style.display = isLoggedIn ? 'none' : 'flex';
+        if (authDivider) authDivider.style.display = isLoggedIn ? 'none' : 'block';
+
+        if (currentUser && accountUserName && accountUserEmail) {
+          accountUserName.textContent = currentUser.username || 'User';
+          accountUserEmail.textContent = currentUser.email;
+        }
+
+        if (logoutFromMenuBtn) {
+          logoutFromMenuBtn.onclick = () => {
+            logout();
+            updateAccountButton();
+            setMessage('Signed out.');
+          };
+        }
       }
 
       document.addEventListener('DOMContentLoaded', () => {
@@ -293,6 +379,7 @@
         updateAccountButton();
 
         accountBtn.addEventListener('click', () => {
+          updateAccountButton();
           accountModal.classList.add('open');
           setMessage('');
         });

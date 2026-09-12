@@ -3,6 +3,102 @@
   const SESSION_KEY = 'azha_moh_session_v1';
   const MESSAGES_KEY = 'azha_moh_messages_v1';
 
+  function getSupabaseConfig() {
+    const url = (window.SUPABASE_URL || '').trim();
+    const anonKey = (window.SUPABASE_ANON_KEY || '').trim();
+    return { url, anonKey };
+  }
+
+  function ensureSupabaseLibrary() {
+    if (window.supabase && typeof window.supabase.createClient === 'function') {
+      return true;
+    }
+
+    if (document.querySelector('script[data-azha-supabase-lib="true"]')) {
+      return false;
+    }
+
+    const script = document.createElement('script');
+    script.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';
+    script.async = true;
+    script.dataset.azhaSupabaseLib = 'true';
+    document.head.appendChild(script);
+    return false;
+  }
+
+  function ensureSupabaseConfigFile() {
+    if (window.SUPABASE_URL && window.SUPABASE_ANON_KEY) {
+      return true;
+    }
+
+    if (document.querySelector('script[data-azha-supabase-config="true"]')) {
+      return false;
+    }
+
+    const script = document.createElement('script');
+    script.src = 'supabase-config.js';
+    script.async = false;
+    script.dataset.azhaSupabaseConfig = 'true';
+    document.head.appendChild(script);
+    return false;
+  }
+
+  function getSupabaseClient() {
+    const { url, anonKey } = getSupabaseConfig();
+    if (!url || !anonKey) {
+      ensureSupabaseConfigFile();
+      return null;
+    }
+
+    if (!window.supabase || typeof window.supabase.createClient !== 'function') {
+      ensureSupabaseLibrary();
+      return null;
+    }
+
+    return window.supabase.createClient(url, anonKey, {
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
+        detectSessionInUrl: false
+      }
+    });
+  }
+
+  function syncSupabaseUser(user) {
+    const client = getSupabaseClient();
+    if (!client || !user) {
+      return { success: false, message: 'Supabase is not configured yet.' };
+    }
+
+    try {
+      const payload = {
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        role: user.role || 'user',
+        friends: Array.isArray(user.friends) ? user.friends : [],
+        created_at: user.createdAt || new Date().toISOString()
+      };
+
+      return client
+        .from('profiles')
+        .upsert(payload, { onConflict: 'id' })
+        .select()
+        .then(({ error }) => {
+          if (error) {
+            return { success: false, message: error.message || 'Supabase sync failed.' };
+          }
+          return { success: true };
+        })
+        .catch((error) => ({
+          success: false,
+          message: error?.message || 'Supabase sync failed.'
+        }));
+    } catch (error) {
+      return { success: false, message: error?.message || 'Supabase sync failed.' };
+    }
+  }
+
   function readJSON(key, fallback) {
     try {
       const raw = localStorage.getItem(key);
@@ -126,6 +222,12 @@
   }
 
   const AZHAAccounts = {
+    getSupabaseConfig,
+    getSupabaseClient,
+    syncSupabaseUser,
+    isSupabaseConnected() {
+      return Boolean(getSupabaseClient());
+    },
     getAccounts,
     saveAccounts,
     getCurrentUser,
@@ -181,6 +283,8 @@
       saveAccounts(accounts);
       setCurrentUser(newAccount.id);
 
+      syncSupabaseUser(newAccount);
+
       return {
         success: true,
         user: sanitizeUser(newAccount)
@@ -204,6 +308,7 @@
       }
 
       setCurrentUser(account.id);
+      syncSupabaseUser(account);
       return {
         success: true,
         user: sanitizeUser(account)
@@ -266,21 +371,21 @@
 
       return { success: true };
     },
-    addFriend(friendUsername) {
+    addFriend(friendEmail) {
       const currentUser = getCurrentUser();
 
       if (!currentUser) {
         return { success: false, message: 'Please log in first.' };
       }
 
-      const cleanFriend = normalizeUsername(friendUsername);
-      if (!cleanFriend) {
-        return { success: false, message: 'Please enter a username.' };
+      const cleanFriendEmail = normalizeEmail(friendEmail);
+      if (!cleanFriendEmail) {
+        return { success: false, message: 'Please enter the user email.' };
       }
 
       const accounts = getAccounts();
       const friend = accounts.find(
-        (account) => account.username.toLowerCase() === cleanFriend.toLowerCase()
+        (account) => account.email === cleanFriendEmail
       );
 
       if (!friend) {

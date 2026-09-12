@@ -393,10 +393,9 @@
       });
     </script>
 
+    <script src="accounts.js"></script>
     <script>
-      const supabaseUrl = 'https://xfwlmjktnqezvslabsrc.supabase.co';
-      const supabaseKey = 'sb_publishable_IXGnAQnXbbMM1hkcK3wM-Q_tDO9B7fP';
-      const supabase = window.supabase ? window.supabase.createClient(supabaseUrl, supabaseKey) : null;
+      const { getCurrentUser, login, createAccount, logout } = window.AZHAAccounts;
 
       function setMessage(text, isError = false) {
         const el = document.getElementById('accountMessage');
@@ -405,23 +404,11 @@
         el.style.color = isError ? '#ff9aa2' : '#8be9fd';
       }
 
-      async function updateAccountButton() {
+      function updateAccountButton() {
         const button = document.getElementById('accountBtn');
         if (!button) return;
-
-        if (!supabase) {
-          button.textContent = 'Account';
-          return;
-        }
-
-        const { data: { session } } = await supabase.auth.getSession();
-
-        if (session && session.user) {
-          const email = session.user.email || 'Account';
-          button.textContent = email;
-        } else {
-          button.textContent = 'Account';
-        }
+        const currentUser = getCurrentUser();
+        button.textContent = currentUser ? currentUser.email : 'Account';
       }
 
       document.addEventListener('DOMContentLoaded', () => {
@@ -436,9 +423,6 @@
         accountBtn.addEventListener('click', () => {
           accountModal.classList.add('open');
           setMessage('');
-          if (!supabase) {
-            setMessage('Supabase is not available. Check the script connection.', true);
-          }
         });
 
         closeBtn.addEventListener('click', () => {
@@ -451,81 +435,45 @@
           }
         });
 
-        loginForm.addEventListener('submit', async (event) => {
+        loginForm.addEventListener('submit', (event) => {
           event.preventDefault();
-          if (!supabase) {
-            setMessage('Supabase is not available. Check the script connection.', true);
-            return;
-          }
-
           const email = document.getElementById('loginEmail').value.trim();
           const password = document.getElementById('loginPassword').value;
+          const result = login({ email, password });
 
-          const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-
-          if (error) {
-            setMessage(error.message, true);
+          if (!result.success) {
+            setMessage(result.message, true);
             return;
           }
 
-          if (data.user) {
-            await updateAccountButton();
-            accountModal.classList.remove('open');
-            loginForm.reset();
-            setMessage('Logged in successfully!');
-          }
+          updateAccountButton();
+          accountModal.classList.remove('open');
+          loginForm.reset();
+          setMessage('Logged in successfully!');
         });
 
-        signupForm.addEventListener('submit', async (event) => {
+        signupForm.addEventListener('submit', (event) => {
           event.preventDefault();
-          if (!supabase) {
-            setMessage('Supabase is not available. Check the script connection.', true);
-            return;
-          }
-
           const displayName = document.getElementById('signupUsername').value.trim();
           const email = document.getElementById('signupEmail').value.trim();
           const password = document.getElementById('signupPassword').value;
+          const result = createAccount({ username: displayName, email, password });
 
-          if (!email || !password) {
-            setMessage('Please enter an email and password.', true);
+          if (!result.success) {
+            setMessage(result.message, true);
             return;
           }
 
-          const { data, error } = await supabase.auth.signUp({
-            email,
-            password,
-            options: {
-              data: {
-                username: displayName || email.split('@')[0]
-              }
-            }
-          });
-
-          if (error) {
-            setMessage(error.message, true);
-            return;
-          }
-
-          if (data.user) {
-            await updateAccountButton();
-            accountModal.classList.remove('open');
-            signupForm.reset();
-            setMessage('Account created! Check your email for confirmation.');
-          }
+          updateAccountButton();
+          accountModal.classList.remove('open');
+          signupForm.reset();
+          setMessage('Account created successfully!');
         });
 
-        accountBtn.addEventListener('dblclick', async () => {
-          if (!supabase) {
-            setMessage('Supabase is not available. Check the script connection.', true);
-            return;
-          }
-
-          const { error } = await supabase.auth.signOut();
-          if (!error) {
-            await updateAccountButton();
-            setMessage('Signed out.');
-          }
+        accountBtn.addEventListener('dblclick', () => {
+          logout();
+          updateAccountButton();
+          setMessage('Signed out.');
         });
       });
     </script>
